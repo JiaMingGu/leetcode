@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>烟火秀</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      (() => {
+        const html = document.querySelector('html');
+        const canvas = document.getElementById('canvas'); // 获取画布
+        const ctx = canvas.getContext('2d'); // 获取画布上下文
+        const ranNum = (max, min) => Math.random() * (max - min) + min;
+
+        // 封装绘画类
+        const Drawer = {
+          drawRect(style, rectOptions = { x: 0, y: 0, width: canvas.width, height: canvas.height }) {
+            const {
+              x /*矩形起始点的x轴坐标*/,
+              y /*矩形起始点的y轴坐标*/,
+              width /*矩形的宽度*/,
+              height /*矩形的高度*/
+            } = rectOptions;
+            ctx.beginPath();
+            ctx.fillStyle = style;
+            ctx.fillRect(x, y, width, height);
+            ctx.closePath();
+          },
+          drawArc(style, arcOptions) {
+            const {
+              x /*圆弧中心（圆心）的 x 轴坐标*/,
+              y /*圆弧中心（圆心）的 y 轴坐标*/,
+              r /*圆弧的半径*/,
+              startAngle /*圆弧的起始点, x 轴方向开始计算，单位以弧度表示*/,
+              endAngle /*圆弧的终点， 单位以弧度表示*/
+            } = arcOptions;
+            ctx.beginPath();
+            ctx.arc(x, y, r, startAngle, endAngle);
+            ctx.strokeStyle = style;
+            ctx.stroke();
+            ctx.closePath();
+          },
+          /**
+          * 绘制文本
+          * @param {*} style 绘制文本的 style
+          * @param {*} textOptions 文本相关的配置信息, 包含属性:
+          *    text: 在画布上输出的文本
+          *    x: 相对于画布开始绘制文本的 x 坐标位置
+          *    y: 相对于画布开始绘制文本的 y 坐标位置
+          */
+         drawText(style, textOptions) {
+          const {
+              text /*文字*/,
+              x /*圆弧中心（圆心）的 x 轴坐标*/,
+              y /*圆弧中心（圆心）的 y 轴坐标*/
+            } = textOptions;
+           /*****************************
+            * 请在此编写代码，绘制文本
+            *****************************/
+            ctx.beginPath();
+            ctx.strokeStyle = style;
+            ctx.font="30px Verdana";
+            ctx.strokeText(text,x, y);
+            ctx.closePath();
+            }
+        };
+
+        // 定义烟花类
+        class Firework {
+          constructor() {
+            this._init();
+          }
+
+          draw() {
+            const isNotReachHeight = this.y > this.flashY; // 还没上升到该爆炸的高度
+            if (isNotReachHeight) {
+              this._rise();
+            } else {
+              this._flash();
+            }
+          }
+
+          // 模拟上升
+          _rise() {
+            this._drawRect();
+            this.y -= this.deltaY;
+          }
+
+          // 模拟烟花炸开
+          _flash() {
+            this._drawArc();
+            this._drawText('七夕情人节快乐！！！');
+
+            const MAX_RADIUS = 100;
+            const isStillFlash = this.r < MAX_RADIUS; // 还没炸完
+            if (isStillFlash) {
+              this.r += this.deltaR;
+              this.alpha *= this.deltaAlpha;
+            } else {
+              // 炸完了消失 => 重置
+              this._init();
+            }
+          }
+
+          _init() {
+            this._initX();
+            this._initY();
+            this._initR();
+            this._initStyle();
+          }
+
+          // 初始化烟花上升时通道 x 坐标相关
+          _initX() {
+            this.x = ranNum(0, canvas.width); // 画矩形x轴坐标, 随机值
+          }
+
+          // 初始化烟花上升时通道 y 坐标相关
+          _initY() {
+            this.y = canvas.height; // 画矩形y轴坐标
+            this.deltaY = 4; // y轴坐标每次重绘减少的delta 模拟烟花的上升
+            this.flashY = ranNum(0.1 * canvas.height, 0.4 * canvas.height); // y轴烟花爆炸的坐标
+          }
+
+          // 初始化烟花圆形绘制时半径相关
+          _initR() {
+            this.r = 1; // 烟花初始半径
+            this.deltaR = 2; // 半径变化的 delta, 模拟烟花炸开
+          }
+
+          // 初始化烟花绘制时 style
+          _initStyle() {
+            this.alpha = 1; // 初始alpha, 1 表示完全不透明, 0 表示完全透明, 可以参见 https://www.w3schools.com/cssref/func_rgba.asp
+            this.deltaAlpha = 0.02; // 每次透明度变化的 delta 最终模拟烟花消失
+            this.style = `rgba(${ranNum(0, 255)},${ranNum(0, 255)},${ranNum(0, 255)},${this.alpha})`;
+          }
+
+          /**
+           * 模拟烟火
+           */
+          _drawArc() {
+            const startAngle = 0;
+            const endAngle = Math.PI * 2; //画圆
+            Drawer.drawArc(this.style, {
+              x: this.x,
+              y: this.y,
+              r: this.r,
+              startAngle,
+              endAngle
+            });
+          }
+
+          /**
+           * 模拟上升的动作
+           */
+          _drawRect() {
+            Drawer.drawRect(this.style, {
+              x: this.x,
+              y: this.y,
+              width: 2,
+              height: 10
+            });
+          }
+
+          /**
+           * 绘制文本
+           */
+          _drawText(text) {
+            Drawer.drawText(this.style, { text, x: this.x, y: this.y });
+          }
+        }
+
+        // 烟花秀
+        class FireWorksShow {
+          // 初始化一场烟花秀, 共 20 只烟花
+          constructor(num = 20) {
+            this.fires = [];
+            for (var i = 0; i < num; i++) {
+              this.fires.push(new Firework());
+            }
+          }
+
+          // 开始放烟花
+          show() {
+            this._drawTails();
+            this.fires.forEach((fire) => fire.draw());
+            requestAnimationFrame(this.show.bind(this));
+          }
+
+          // 模拟烟花尾巴
+          _drawTails() {
+            Drawer.drawRect('rgba(0,0,0,0.1)');
+          }
+
+          _drawBlackSky() {
+            Drawer.drawRect('black');
+          }
+        }
+
+        // 初始化 canvas 大小
+        function initCanvas() {
+          canvas.width = html.clientWidth;
+          canvas.height = html.clientHeight;
+        }
+
+        // 监听 onresize 事件
+        function mountWinOnResize() {
+          window.onresize = function onresize() {
+            drawRect('black');
+          };
+        }
+
+        (function startShow() {
+          initCanvas();
+          mountWinOnResize();
+
+          new FireWorksShow().show();
+        })();
+      })();
+    </script>
+  </body>
+</html>
